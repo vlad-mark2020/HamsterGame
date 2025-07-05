@@ -137,8 +137,23 @@
         <div class="section" id="upgradesSection">
             <div class="upgrade">
                 <div><strong>+10 за тап</strong></div>
-                <div>Цена: <span id="upgradeCost">100</span></div>
-                <button id="buyUpgradeBtn">Купить</button>
+                <div>Цена: <span id="tapUpgradeCost">100</span></div>
+                <button id="buyTapUpgradeBtn">Купить</button>
+            </div>
+            <div class="upgrade">
+                <div><strong>Автокликер +1/сек</strong></div>
+                <div>Цена: <span id="autoClickerCost">200</span></div>
+                <button id="buyAutoClickerBtn">Купить</button>
+            </div>
+            <div class="upgrade">
+                <div><strong>Реген энергии x2</strong></div>
+                <div>Цена: <span id="regenUpgradeCost">300</span></div>
+                <button id="buyRegenUpgradeBtn">Купить</button>
+            </div>
+            <div class="upgrade">
+                <div><strong>Новый скин хомяка 🐹</strong></div>
+                <div>Цена: <span id="skinUpgradeCost">500</span></div>
+                <button id="buySkinUpgradeBtn">Купить</button>
             </div>
         </div>
     </div>
@@ -158,8 +173,15 @@
         const energyBarElem = document.getElementById('eb');
         const hamsterElem = document.getElementById('h');
         const resetBtn = document.getElementById('resetBtn');
-        const buyUpgradeBtn = document.getElementById('buyUpgradeBtn');
-        const upgradeCostElem = document.getElementById('upgradeCost');
+
+        const buyTapUpgradeBtn = document.getElementById('buyTapUpgradeBtn');
+        const tapUpgradeCostElem = document.getElementById('tapUpgradeCost');
+        const buyAutoClickerBtn = document.getElementById('buyAutoClickerBtn');
+        const autoClickerCostElem = document.getElementById('autoClickerCost');
+        const buyRegenUpgradeBtn = document.getElementById('buyRegenUpgradeBtn');
+        const regenUpgradeCostElem = document.getElementById('regenUpgradeCost');
+        const buySkinUpgradeBtn = document.getElementById('buySkinUpgradeBtn');
+        const skinUpgradeCostElem = document.getElementById('skinUpgradeCost');
 
         const gameTab = document.getElementById('gameTab');
         const upgradesTab = document.getElementById('upgradesTab');
@@ -169,23 +191,22 @@
         let balance = 0;
         let energy = 1000;
         const maxEnergy = 1000;
-        const energyRestoreSpeed = 0.5;
+        let energyRestoreSpeed = 0.5;
         let tapPower = 1;
-        let upgradeCost = 100;
+        let autoClickerPower = 0;
+
+        let tapUpgradeCost = 100;
+        let autoClickerCost = 200;
+        let regenUpgradeCost = 300;
+        let skinUpgradeCost = 500;
 
         function loadData() {
             try {
-                const storedBalance = localStorage.getItem('hamsterBalance');
-                const storedEnergy = localStorage.getItem('hamsterEnergy');
-                const storedTapPower = localStorage.getItem('hamsterTapPower');
-                const storedUpgradeCost = localStorage.getItem('hamsterUpgradeCost');
-
-                if (storedBalance !== null) balance = parseInt(storedBalance) || 0;
-                if (storedEnergy !== null) energy = parseFloat(storedEnergy) || maxEnergy;
-                if (storedTapPower !== null) tapPower = parseInt(storedTapPower) || 1;
-                if (storedUpgradeCost !== null) upgradeCost = parseInt(storedUpgradeCost) || 100;
-
-                upgradeCostElem.textContent = upgradeCost;
+                balance = parseInt(localStorage.getItem('hamsterBalance')) || 0;
+                energy = parseFloat(localStorage.getItem('hamsterEnergy')) || maxEnergy;
+                tapPower = parseInt(localStorage.getItem('hamsterTapPower')) || 1;
+                autoClickerPower = parseInt(localStorage.getItem('hamsterAutoClickerPower')) || 0;
+                energyRestoreSpeed = parseFloat(localStorage.getItem('hamsterRegenSpeed')) || 0.5;
             } catch {
                 balance = 0;
                 energy = maxEnergy;
@@ -196,7 +217,8 @@
             localStorage.setItem('hamsterBalance', balance);
             localStorage.setItem('hamsterEnergy', energy);
             localStorage.setItem('hamsterTapPower', tapPower);
-            localStorage.setItem('hamsterUpgradeCost', upgradeCost);
+            localStorage.setItem('hamsterAutoClickerPower', autoClickerPower);
+            localStorage.setItem('hamsterRegenSpeed', energyRestoreSpeed);
         }
 
         function updateUI() {
@@ -204,7 +226,10 @@
             energyElem.textContent = Math.floor(energy);
             energyBarElem.style.width = (energy / maxEnergy) * 100 + '%';
 
-            buyUpgradeBtn.disabled = balance < upgradeCost;
+            buyTapUpgradeBtn.disabled = balance < tapUpgradeCost;
+            buyAutoClickerBtn.disabled = balance < autoClickerCost;
+            buyRegenUpgradeBtn.disabled = balance < regenUpgradeCost;
+            buySkinUpgradeBtn.disabled = balance < skinUpgradeCost;
 
             if (energy <= 0) {
                 hamsterElem.classList.add('disabled');
@@ -216,6 +241,15 @@
         function restoreEnergy() {
             if (energy < maxEnergy) {
                 energy = Math.min(energy + energyRestoreSpeed, maxEnergy);
+            }
+            updateUI();
+            saveData();
+        }
+
+        function autoClickerTick() {
+            if (autoClickerPower > 0 && energy >= autoClickerPower) {
+                balance += autoClickerPower;
+                energy -= autoClickerPower;
                 updateUI();
                 saveData();
             }
@@ -233,30 +267,65 @@
         }
 
         hamsterElem.addEventListener('touchstart', (e) => {
-            if (hamsterElem.classList.contains('disabled')) return;
-            tapHamster(e.touches.length);
+            if (!hamsterElem.classList.contains('disabled')) {
+                tapHamster(e.touches.length);
+            }
         });
-
         hamsterElem.addEventListener('click', () => {
-            if (!hamsterElem.classList.contains('disabled')) tapHamster();
+            if (!hamsterElem.classList.contains('disabled')) {
+                tapHamster();
+            }
         });
 
         resetBtn.addEventListener('click', () => {
             balance = 0;
             energy = maxEnergy;
             tapPower = 1;
-            upgradeCost = 100;
-            upgradeCostElem.textContent = upgradeCost;
+            autoClickerPower = 0;
+            energyRestoreSpeed = 0.5;
             updateUI();
             saveData();
         });
 
-        buyUpgradeBtn.addEventListener('click', () => {
-            if (balance >= upgradeCost) {
-                balance -= upgradeCost;
+        buyTapUpgradeBtn.addEventListener('click', () => {
+            if (balance >= tapUpgradeCost) {
+                balance -= tapUpgradeCost;
                 tapPower += 10;
-                upgradeCost = Math.floor(upgradeCost * 2); // Каждое улучшение в 2 раза дороже
-                upgradeCostElem.textContent = upgradeCost;
+                tapUpgradeCost *= 2;
+                tapUpgradeCostElem.textContent = tapUpgradeCost;
+                updateUI();
+                saveData();
+            }
+        });
+
+        buyAutoClickerBtn.addEventListener('click', () => {
+            if (balance >= autoClickerCost) {
+                balance -= autoClickerCost;
+                autoClickerPower += 1;
+                autoClickerCost *= 2;
+                autoClickerCostElem.textContent = autoClickerCost;
+                updateUI();
+                saveData();
+            }
+        });
+
+        buyRegenUpgradeBtn.addEventListener('click', () => {
+            if (balance >= regenUpgradeCost) {
+                balance -= regenUpgradeCost;
+                energyRestoreSpeed *= 2;
+                regenUpgradeCost *= 2;
+                regenUpgradeCostElem.textContent = regenUpgradeCost;
+                updateUI();
+                saveData();
+            }
+        });
+
+        buySkinUpgradeBtn.addEventListener('click', () => {
+            if (balance >= skinUpgradeCost) {
+                balance -= skinUpgradeCost;
+                hamsterElem.src = "https://i.imgur.com/UWbD7XW.png"; // Новый скин хомяка
+                skinUpgradeCost *= 2;
+                skinUpgradeCostElem.textContent = skinUpgradeCost;
                 updateUI();
                 saveData();
             }
@@ -279,6 +348,7 @@
         loadData();
         updateUI();
         setInterval(restoreEnergy, 1000);
+        setInterval(autoClickerTick, 1000);
     }
 </script>
 </body>
