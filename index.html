@@ -14,6 +14,8 @@
             margin: 0;
             font-family: "Comic Sans MS", cursive, sans-serif;
             user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
         }
         .game {
             background: #fff;
@@ -48,9 +50,8 @@
         }
         .h {
             width: 150px;
-            transition: transform 0.2s ease;
+            transition: transform 0.1s ease;
             cursor: pointer;
-            user-select: none;
         }
         .h.disabled {
             filter: grayscale(100%);
@@ -61,18 +62,12 @@
             transform: scale(1.1) rotate(5deg);
         }
         .a {
-            animation: j 0.3s;
+            animation: j 0.2s;
         }
         @keyframes j {
-            0% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-30px);
-            }
-            100% {
-                transform: translateY(0);
-            }
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0); }
         }
         .r {
             margin-top: 20px;
@@ -115,7 +110,6 @@
     </div>
 
 <script>
-    // Проверка мобильного устройства
     function isMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
@@ -136,7 +130,6 @@
         const maxEnergy = 1000;
         const energyRestoreSpeed = 0.5;
 
-        // Загрузка данных из localStorage
         function loadData() {
             try {
                 const storedBalance = localStorage.getItem('hamsterBalance');
@@ -155,13 +148,11 @@
             }
         }
 
-        // Сохранение данных
         function saveData() {
             localStorage.setItem('hamsterBalance', balance);
             localStorage.setItem('hamsterEnergy', energy);
         }
 
-        // Обновление интерфейса
         function updateUI() {
             balanceElem.textContent = balance;
             energyElem.textContent = Math.floor(energy);
@@ -169,14 +160,11 @@
 
             if (energy <= 0) {
                 hamsterElem.classList.add('disabled');
-                hamsterElem.style.pointerEvents = 'none';
             } else {
                 hamsterElem.classList.remove('disabled');
-                hamsterElem.style.pointerEvents = 'auto';
             }
         }
 
-        // Восстановление энергии
         function restoreEnergy() {
             if (energy < maxEnergy) {
                 energy = Math.min(energy + energyRestoreSpeed, maxEnergy);
@@ -185,20 +173,30 @@
             }
         }
 
-        // Обработчик клика на хомяке
-        hamsterElem.addEventListener('click', () => {
-            if (energy >= 1) {
-                balance++;
-                energy--;
+        function tapHamster(tapCount = 1) {
+            if (energy >= tapCount) {
+                balance += tapCount;
+                energy -= tapCount;
                 updateUI();
                 saveData();
-
                 hamsterElem.classList.add('a');
-                setTimeout(() => hamsterElem.classList.remove('a'), 300);
+                setTimeout(() => hamsterElem.classList.remove('a'), 150);
+            }
+        }
+
+        // Основной обработчик мульти-тапов
+        hamsterElem.addEventListener('touchstart', (e) => {
+            if (hamsterElem.classList.contains('disabled')) return;
+            tapHamster(e.touches.length); // Количество пальцев
+        });
+
+        // Для быстрого клика мышкой
+        hamsterElem.addEventListener('click', () => {
+            if (!hamsterElem.classList.contains('disabled')) {
+                tapHamster();
             }
         });
 
-        // Обработчик кнопки сброса
         resetBtn.addEventListener('click', () => {
             balance = 0;
             energy = maxEnergy;
@@ -206,12 +204,11 @@
             saveData();
         });
 
-        // Инициализация
         loadData();
         updateUI();
         setInterval(restoreEnergy, 1000);
 
-        // Анти DevTools (оставлю как есть)
+        // Анти DevTools
         (function protect() {
             let open = false;
             const detect = setInterval(function () {
@@ -229,35 +226,10 @@
             }, 1000);
         })();
 
-        // Блокировка масштабирования на мобильных устройствах
-        let lastTouchEnd = 0;
-        window.addEventListener(
-            "touchend",
-            function (event) {
-                let now = Date.now();
-                if (now - lastTouchEnd <= 300) {
-                    event.preventDefault();
-                }
-                lastTouchEnd = now;
-            },
-            { passive: false }
-        );
-        window.addEventListener(
-            "touchstart",
-            function (event) {
-                if (event.touches.length > 1) {
-                    event.preventDefault();
-                }
-            },
-            { passive: false }
-        );
-        window.addEventListener(
-            "wheel",
-            function (e) {
-                if (e.ctrlKey) e.preventDefault();
-            },
-            { passive: false }
-        );
+        // Блокировка масштабирования
+        document.addEventListener('gesturestart', (e) => e.preventDefault());
+        document.addEventListener('gesturechange', (e) => e.preventDefault());
+        document.addEventListener('gestureend', (e) => e.preventDefault());
     }
 </script>
 </body>
