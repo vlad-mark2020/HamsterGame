@@ -69,44 +69,78 @@
             50% { transform: translateY(-20px); }
             100% { transform: translateY(0); }
         }
-        .r {
-            margin-top: 20px;
-            background: #ff7f50;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1em;
+        .tabs {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
         }
-        .r:hover {
+        .tab {
+            flex: 1;
+            padding: 8px;
+            background: #ff7f50;
+            color: white;
+            border-radius: 10px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+        .tab.active {
             background: #ff6347;
         }
-        #pcWarning {
+        .section {
             display: none;
-            color: red;
-            font-size: 1.5em;
-            text-align: center;
-            padding: 20px;
+        }
+        .section.active {
+            display: block;
+        }
+        .upgrade {
+            margin: 10px 0;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .upgrade button {
+            background: #32cd32;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .upgrade button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
     <div id="pcWarning">❌ Игра доступна только на мобильных устройствах 📱</div>
     <div class="game" id="game" style="display:none;">
-        <div class="b">Баланс: <span id="b">0</span></div>
-        <div class="e">Энергия: <span id="e">1000</span>/1000</div>
-        <div class="eb-c">
-            <div class="eb" id="eb"></div>
+        <div class="tabs">
+            <div class="tab active" id="gameTab">Игра</div>
+            <div class="tab" id="upgradesTab">Улучшения</div>
         </div>
-        <img
-            src="https://www.online.ua/static/content/files/5/41/0d6fb9417841fb680f85f8fd2b819415.jpg"
-            alt="Хомяк"
-            class="h"
-            id="h"
-        />
-        <br />
-        <button class="r" id="resetBtn">Сбросить</button>
+        <div class="section active" id="gameSection">
+            <div class="b">Баланс: <span id="b">0</span></div>
+            <div class="e">Энергия: <span id="e">1000</span>/1000</div>
+            <div class="eb-c">
+                <div class="eb" id="eb"></div>
+            </div>
+            <img
+                src="https://www.online.ua/static/content/files/5/41/0d6fb9417841fb680f85f8fd2b819415.jpg"
+                alt="Хомяк"
+                class="h"
+                id="h"
+            />
+            <br />
+            <button class="r" id="resetBtn">Сбросить</button>
+        </div>
+        <div class="section" id="upgradesSection">
+            <div class="upgrade">
+                <div><strong>+10 за тап</strong></div>
+                <div>Цена: <span id="upgradeCost">100</span></div>
+                <button id="buyUpgradeBtn">Купить</button>
+            </div>
+        </div>
     </div>
 
 <script>
@@ -124,24 +158,34 @@
         const energyBarElem = document.getElementById('eb');
         const hamsterElem = document.getElementById('h');
         const resetBtn = document.getElementById('resetBtn');
+        const buyUpgradeBtn = document.getElementById('buyUpgradeBtn');
+        const upgradeCostElem = document.getElementById('upgradeCost');
+
+        const gameTab = document.getElementById('gameTab');
+        const upgradesTab = document.getElementById('upgradesTab');
+        const gameSection = document.getElementById('gameSection');
+        const upgradesSection = document.getElementById('upgradesSection');
 
         let balance = 0;
         let energy = 1000;
         const maxEnergy = 1000;
         const energyRestoreSpeed = 0.5;
+        let tapPower = 1;
+        let upgradeCost = 100;
 
         function loadData() {
             try {
                 const storedBalance = localStorage.getItem('hamsterBalance');
                 const storedEnergy = localStorage.getItem('hamsterEnergy');
-                if (storedBalance !== null) {
-                    balance = parseInt(storedBalance);
-                    if (isNaN(balance)) balance = 0;
-                }
-                if (storedEnergy !== null) {
-                    energy = parseFloat(storedEnergy);
-                    if (isNaN(energy)) energy = maxEnergy;
-                }
+                const storedTapPower = localStorage.getItem('hamsterTapPower');
+                const storedUpgradeCost = localStorage.getItem('hamsterUpgradeCost');
+
+                if (storedBalance !== null) balance = parseInt(storedBalance) || 0;
+                if (storedEnergy !== null) energy = parseFloat(storedEnergy) || maxEnergy;
+                if (storedTapPower !== null) tapPower = parseInt(storedTapPower) || 1;
+                if (storedUpgradeCost !== null) upgradeCost = parseInt(storedUpgradeCost) || 100;
+
+                upgradeCostElem.textContent = upgradeCost;
             } catch {
                 balance = 0;
                 energy = maxEnergy;
@@ -151,12 +195,16 @@
         function saveData() {
             localStorage.setItem('hamsterBalance', balance);
             localStorage.setItem('hamsterEnergy', energy);
+            localStorage.setItem('hamsterTapPower', tapPower);
+            localStorage.setItem('hamsterUpgradeCost', upgradeCost);
         }
 
         function updateUI() {
             balanceElem.textContent = balance;
             energyElem.textContent = Math.floor(energy);
             energyBarElem.style.width = (energy / maxEnergy) * 100 + '%';
+
+            buyUpgradeBtn.disabled = balance < upgradeCost;
 
             if (energy <= 0) {
                 hamsterElem.classList.add('disabled');
@@ -175,7 +223,7 @@
 
         function tapHamster(tapCount = 1) {
             if (energy >= tapCount) {
-                balance += tapCount;
+                balance += tapPower * tapCount;
                 energy -= tapCount;
                 updateUI();
                 saveData();
@@ -184,52 +232,53 @@
             }
         }
 
-        // Основной обработчик мульти-тапов
         hamsterElem.addEventListener('touchstart', (e) => {
             if (hamsterElem.classList.contains('disabled')) return;
-            tapHamster(e.touches.length); // Количество пальцев
+            tapHamster(e.touches.length);
         });
 
-        // Для быстрого клика мышкой
         hamsterElem.addEventListener('click', () => {
-            if (!hamsterElem.classList.contains('disabled')) {
-                tapHamster();
-            }
+            if (!hamsterElem.classList.contains('disabled')) tapHamster();
         });
 
         resetBtn.addEventListener('click', () => {
             balance = 0;
             energy = maxEnergy;
+            tapPower = 1;
+            upgradeCost = 100;
+            upgradeCostElem.textContent = upgradeCost;
             updateUI();
             saveData();
+        });
+
+        buyUpgradeBtn.addEventListener('click', () => {
+            if (balance >= upgradeCost) {
+                balance -= upgradeCost;
+                tapPower += 10;
+                upgradeCost = Math.floor(upgradeCost * 2); // Каждое улучшение в 2 раза дороже
+                upgradeCostElem.textContent = upgradeCost;
+                updateUI();
+                saveData();
+            }
+        });
+
+        gameTab.addEventListener('click', () => {
+            gameTab.classList.add('active');
+            upgradesTab.classList.remove('active');
+            gameSection.classList.add('active');
+            upgradesSection.classList.remove('active');
+        });
+
+        upgradesTab.addEventListener('click', () => {
+            upgradesTab.classList.add('active');
+            gameTab.classList.remove('active');
+            upgradesSection.classList.add('active');
+            gameSection.classList.remove('active');
         });
 
         loadData();
         updateUI();
         setInterval(restoreEnergy, 1000);
-
-        // Анти DevTools
-        (function protect() {
-            let open = false;
-            const detect = setInterval(function () {
-                const t = new Date();
-                debugger;
-                if (new Date() - t > 50) {
-                    open = true;
-                }
-                if (open) {
-                    alert("DevTools запрещён!");
-                    localStorage.clear();
-                    location.reload();
-                    clearInterval(detect);
-                }
-            }, 1000);
-        })();
-
-        // Блокировка масштабирования
-        document.addEventListener('gesturestart', (e) => e.preventDefault());
-        document.addEventListener('gesturechange', (e) => e.preventDefault());
-        document.addEventListener('gestureend', (e) => e.preventDefault());
     }
 </script>
 </body>
